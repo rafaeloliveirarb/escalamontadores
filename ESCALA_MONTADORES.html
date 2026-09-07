@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Escala de Montadores — GTP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500;75..100,700;75..100,800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --ink:#1C2127; --paper:#F4F6F3; --card:#FFFFFF; --line:#DDE2DA; --mut:#6B7280;
+  --t:#188A47;  --fo:#5B6B7E; --fa:#D2322E; --at:#C08A00; --fe:#2563EB; --df:#7C3AED; --mt:#0D8F8F;
+  --t-bg:#DCF3E5; --fo-bg:#E8EDF3; --fa-bg:#FBE0DF; --at-bg:#FCF0CE; --fe-bg:#DEE9FD; --df-bg:#EDE4FC; --mt-bg:#D8F0F0;
+  --focus:#1C2127;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{font-family:'Archivo',system-ui,sans-serif;background:var(--paper);color:var(--ink);font-size:15px}
+button{font-family:inherit;cursor:pointer}
+button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+
+/* ---------- topo ---------- */
+header{background:var(--ink);color:#fff;padding:14px 16px 0;position:sticky;top:0;z-index:30}
+.h-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+h1{font-size:20px;font-weight:800;font-stretch:80%;letter-spacing:.01em}
+h1 small{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:500;color:#AEB6BF;letter-spacing:.05em}
+#sync{width:8px;height:8px;border-radius:50%;background:#E0A106;display:inline-block}
+#sync.on{background:#3DBB6E} #sync.off{background:#E05B57}
+.mes-nav{display:flex;align-items:center;gap:6px}
+.mes-nav button{background:#2A313A;color:#fff;border:0;border-radius:8px;width:38px;height:38px;font-size:18px;font-weight:700}
+.mes-nav .mes-atual{min-width:170px;text-align:center;font-weight:700;font-size:16px;text-transform:capitalize}
+.tabs{display:flex;gap:2px;margin-top:12px;overflow-x:auto}
+.tabs button{background:transparent;color:#AEB6BF;border:0;padding:10px 14px;font-weight:700;font-size:13px;border-radius:8px 8px 0 0;white-space:nowrap}
+.tabs button.on{background:var(--paper);color:var(--ink)}
+
+main{padding:14px 12px 90px;max-width:1200px;margin:0 auto}
+.carregando{padding:60px 20px;text-align:center;color:var(--mut);font-weight:700}
+
+/* ---------- pincel de status ---------- */
+.pincel{display:flex;gap:6px;overflow-x:auto;padding:10px 2px;position:sticky;top:0;z-index:20;background:var(--paper)}
+.pincel .chip{border:2px solid transparent;border-radius:999px;padding:8px 13px;font-weight:700;font-size:12.5px;white-space:nowrap;color:#fff}
+.chip.sel{border-color:var(--ink);box-shadow:0 2px 0 var(--ink)}
+.chip[data-s="T"]{background:var(--t)} .chip[data-s="FO"]{background:var(--fo)}
+.chip[data-s="FA"]{background:var(--fa)} .chip[data-s="AT"]{background:var(--at)}
+.chip[data-s="FE"]{background:var(--fe)} .chip[data-s="DF"]{background:var(--df)}
+.chip[data-s="MT"]{background:var(--mt)}
+.chip[data-s=""]{background:#fff;color:var(--mut);border:2px dashed var(--line)}
+.pincel-dica{font-size:12px;color:var(--mut);padding:0 4px 8px}
+
+/* ---------- semana ---------- */
+.semana{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:16px;overflow:hidden}
+.semana-cab{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line)}
+.semana-cab b{font-size:14px;font-weight:800}
+.semana-cab button{background:none;border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;color:var(--ink)}
+.grade-wrap{overflow-x:auto}
+table.grade{border-collapse:collapse;width:100%;min-width:780px}
+.grade th{font-size:11px;font-weight:700;color:var(--mut);padding:8px 4px;text-align:center;border-bottom:1px solid var(--line)}
+.grade th.nome-col{text-align:left;padding-left:14px}
+.grade th .dnum{display:block;font-size:14px;color:var(--ink)}
+.grade td{border-bottom:1px solid var(--line);text-align:center;padding:0}
+.grade td.nome{text-align:left;padding:0 8px 0 14px;font-weight:700;font-size:13px;white-space:nowrap;position:sticky;left:0;background:var(--card);z-index:2;box-shadow:1px 0 0 var(--line)}
+.grade td.tot{font-weight:800;font-size:15px}
+.grade tr.eq-row td{background:var(--ink);color:#fff;font-weight:800;font-size:12px;text-align:left;padding:7px 14px;letter-spacing:.04em;position:sticky;left:0}
+.cel{width:100%;min-width:78px;height:46px;border:0;background:#fff;font-weight:800;font-size:11px;color:#C3C9C0;position:relative}
+.cel[data-s="T"]{background:var(--t);color:#fff}
+.cel[data-s="FO"]{background:var(--fo);color:#fff}
+.cel[data-s="FA"]{background:var(--fa);color:#fff}
+.cel[data-s="AT"]{background:var(--at);color:#fff}
+.cel[data-s="FE"]{background:var(--fe);color:#fff}
+.cel[data-s="DF"]{background:var(--df);color:#fff}
+.cel[data-s="MT"]{background:var(--mt);color:#fff}
+.cel .obs-flag{position:absolute;top:4px;right:5px;width:8px;height:8px;border-radius:50%;background:#fff;box-shadow:0 0 0 2px rgba(0,0,0,.15)}
+
+/* ---------- modal de observação ---------- */
+.modal-fundo{position:fixed;inset:0;background:rgba(20,24,29,.55);display:none;align-items:flex-end;justify-content:center;z-index:50}
+.modal-fundo.show{display:flex}
+.modal{background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:520px;padding:18px 16px 22px}
+.modal h3{font-size:16px;font-weight:800}
+.modal .sub{font-size:13px;color:var(--mut);margin:2px 0 14px;text-transform:capitalize}
+.modal .status-opts{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.modal .status-opts .chip{border-radius:999px;padding:8px 13px;font-weight:700;font-size:12.5px;border:2px solid transparent;color:#fff}
+.modal textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-family:inherit;font-size:14px;min-height:74px;resize:vertical}
+.modal .m-acoes{display:flex;gap:8px;margin-top:14px}
+.modal .m-acoes button{flex:1;border-radius:10px;padding:12px;font-weight:800;font-size:14px;border:0}
+.b-salvar{background:var(--ink);color:#fff}
+.b-apagar{background:#fff;color:var(--fa);border:1px solid var(--fa-bg)!important}
+.b-fechar{background:#EEF1EC;color:var(--ink)}
+@media(min-width:640px){ .modal-fundo{align-items:center} .modal{border-radius:16px} }
+
+/* ---------- resumos ---------- */
+.res-card{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:16px}
+.res-wrap{overflow-x:auto}
+table.res{border-collapse:collapse;width:100%;min-width:740px}
+.res th{font-size:11px;font-weight:700;color:var(--mut);padding:10px 8px;border-bottom:1px solid var(--line);text-align:center}
+.res th:first-child{text-align:left;padding-left:14px}
+.res td{padding:10px 8px;border-bottom:1px solid var(--line);text-align:center;font-weight:700;font-size:14px}
+.res td:first-child{text-align:left;padding-left:14px;font-size:13px;white-space:nowrap}
+.res tr:last-child td{border-bottom:0}
+.res tr.eq-row td{background:var(--ink);color:#fff;font-weight:800;font-size:12px;text-align:left;letter-spacing:.04em;padding:7px 14px}
+.res td.zero{color:#C3C9C0;font-weight:500}
+.res td.col-t{color:var(--t)} .res td.col-mt{color:var(--mt)} .res td.col-fa{color:var(--fa)} .res td.col-at{color:var(--at)}
+.res td.col-fe{color:var(--fe)} .res td.col-df{color:var(--df)}
+.res-tit{padding:12px 14px;border-bottom:1px solid var(--line);font-weight:800;font-size:15px;text-transform:capitalize}
+.res tr.rel-total td{border-top:2px solid var(--ink);font-weight:800;background:#F7F8F5}
+
+/* ---------- relatório ---------- */
+.rel-sel{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:6px 2px 14px}
+.rel-sel select{border:1px solid var(--line);border-radius:10px;padding:11px 12px;font-family:inherit;font-size:14px;font-weight:800;background:#fff;min-width:220px}
+.rel-sel .rel-ano{font-size:12.5px;color:var(--mut)}
+
+/* ---------- observações ---------- */
+.obs-item{padding:10px 14px;border-bottom:1px solid var(--line);font-size:13.5px}
+.obs-item:last-child{border-bottom:0}
+.obs-item b{margin-right:6px}
+.obs-item .tag{display:inline-block;color:#fff;border-radius:6px;padding:2px 7px;font-size:11px;font-weight:800;margin-right:6px}
+.obs-vazio{padding:14px;color:var(--mut);font-size:13.5px}
+
+/* ---------- montadores ---------- */
+.mont-lista{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:16px}
+.eq-tit{background:var(--ink);color:#fff;font-weight:800;font-size:12px;letter-spacing:.04em;padding:8px 14px}
+.mont-item{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.mont-item:last-child{border-bottom:0}
+.mont-item b{flex:1;font-size:14px;min-width:120px}
+.mont-item.inativo b{color:#B4BAB1;text-decoration:line-through}
+.mont-item button,.mont-item select{background:none;border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;color:var(--ink);font-family:inherit}
+.mont-item button.rm{color:var(--fa);border-color:var(--fa-bg)}
+.add-row{display:flex;gap:8px;padding:12px;flex-wrap:wrap}
+.add-row input{flex:2;min-width:160px;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-family:inherit;font-size:14px;text-transform:uppercase}
+.add-row select{flex:1;min-width:140px;border:1px solid var(--line);border-radius:8px;padding:10px;font-family:inherit;font-size:13px;font-weight:700}
+.add-row button{background:var(--ink);color:#fff;border:0;border-radius:8px;padding:10px 16px;font-weight:700}
+
+/* ---------- barra de ações ---------- */
+.acoes{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--line);display:flex;gap:8px;padding:10px 12px;justify-content:center;z-index:30}
+.acoes button{background:none;border:1px solid var(--line);border-radius:8px;padding:9px 14px;font-weight:700;font-size:13px;color:var(--ink)}
+.aviso{position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:999px;font-weight:700;font-size:13px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:60}
+.aviso.show{opacity:1}
+
+@media(max-width:640px){
+  h1{font-size:16px}
+  .mes-nav .mes-atual{min-width:130px;font-size:14px}
+  .cel{min-width:66px;height:50px;font-size:10px}
+}
+@media print{
+  header .tabs,.pincel,.pincel-dica,.acoes,.semana-cab button{display:none!important}
+  header{position:static;background:#fff;color:var(--ink);padding:0 0 10px}
+  h1 small{color:var(--mut)}
+  #sync{display:none}
+  .mes-nav button{display:none}
+  body{background:#fff}
+  main{padding:0}
+  .semana,.res-card{break-inside:avoid;border-radius:0}
+  .cel,.grade tr.eq-row td,.res tr.eq-row td,.obs-item .tag{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="h-row">
+    <h1>ESCALA DE MONTADORES<small><span id="sync"></span><span id="syncTxt">CONECTANDO...</span></small></h1>
+    <div class="mes-nav">
+      <button onclick="mudaMes(-1)" aria-label="Mês anterior">‹</button>
+      <div class="mes-atual" id="mesAtual"></div>
+      <button onclick="mudaMes(1)" aria-label="Próximo mês">›</button>
+    </div>
+  </div>
+  <nav class="tabs" id="tabs">
+    <button data-tab="escala" class="on" onclick="vaiTab('escala')">ESCALA</button>
+    <button data-tab="mes" onclick="vaiTab('mes')">RESUMO DO MÊS</button>
+    <button data-tab="ano" onclick="vaiTab('ano')">RESUMO DO ANO</button>
+    <button data-tab="rel" onclick="vaiTab('rel')">RELATÓRIO</button>
+    <button data-tab="mont" onclick="vaiTab('mont')">EQUIPES</button>
+  </nav>
+</header>
+
+<main id="main"><div class="carregando">CARREGANDO ESCALA...</div></main>
+
+<div class="acoes">
+  <button onclick="window.print()">IMPRIMIR</button>
+  <button onclick="exportar()">SALVAR BACKUP</button>
+  <button onclick="carregarTudo(true)">ATUALIZAR</button>
+</div>
+<div class="aviso" id="aviso"></div>
+
+<!-- modal do dia -->
+<div class="modal-fundo" id="modalFundo" onclick="if(event.target===this)fechaModal()">
+  <div class="modal">
+    <h3 id="mNome"></h3>
+    <div class="sub" id="mData"></div>
+    <div class="status-opts" id="mStatus"></div>
+    <textarea id="mObs" placeholder="Observação do dia (ex: saiu mais cedo, evento SESC, atestado até sexta...)"></textarea>
+    <div class="m-acoes">
+      <button class="b-apagar" onclick="modalApagar()">APAGAR</button>
+      <button class="b-fechar" onclick="fechaModal()">FECHAR</button>
+      <button class="b-salvar" onclick="modalSalvar()">SALVAR</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================= SUPABASE ================= */
+const SB_URL = 'https://zsiosgfdvjunniqrtukb.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpzaW9zZ2Zkdmp1bm5pcXJ0dWtiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg3NzQwMjksImV4cCI6MjEwNDM1MDAyOX0.0fgYNWgkFsmz9aWuzX2F7P66g2PBlnEVixa_qh724-g';
+const sb = supabase.createClient(SB_URL, SB_KEY);
+
+/* ================= DADOS ================= */
+const STATUS = { T:'TRABALHOU', MT:'MANUTENÇÃO', FO:'FOLGA', FA:'FALTOU', AT:'ATESTADO', FE:'FÉRIAS', DF:'DOM/FER' };
+const COR = { T:'var(--t)', MT:'var(--mt)', FO:'var(--fo)', FA:'var(--fa)', AT:'var(--at)', FE:'var(--fe)', DF:'var(--df)' };
+const ORDEM_PINCEL = ['T','MT','FO','FA','AT','FE','DF',''];
+
+let db = { equipes:[], montadores:[], marcas:{} };
+let pronto = false;
+
+function cacheSalva(){ try{ localStorage.setItem('escala_gtp_cache', JSON.stringify(db)); }catch(e){} }
+function cacheLe(){ try{ const r=localStorage.getItem('escala_gtp_cache'); return r?JSON.parse(r):null; }catch(e){ return null; } }
+
+async function carregarTudo(manual){
+  try{
+    const [eq, mo, mk] = await Promise.all([
+      sb.from('escala_equipes').select('*').order('ordem'),
+      sb.from('escala_montadores').select('*'),
+      sb.from('escala_marcas').select('chave,status,obs')
+    ]);
+    if(eq.error||mo.error||mk.error) throw (eq.error||mo.error||mk.error);
+    db.equipes = eq.data;
+    db.montadores = mo.data;
+    db.marcas = {};
+    mk.data.forEach(r=>{ db.marcas[r.chave] = {s:r.status, obs:r.obs||''}; });
+    pronto = true;
+    cacheSalva();
+    setSync(true);
+    if(manual) toast('Escala atualizada');
+  }catch(e){
+    const c = cacheLe();
+    if(c){ db = c; pronto = true; setSync(false); toast('Sem conexão — mostrando a última versão salva neste aparelho'); }
+    else { setSync(false); document.getElementById('main').innerHTML = '<div class="carregando">SEM CONEXÃO. Verifique a internet e toque em ATUALIZAR.</div>'; return; }
+  }
+  render();
+}
+
+function setSync(on){
+  const d = document.getElementById('sync'), t = document.getElementById('syncTxt');
+  d.className = on ? 'on' : 'off';
+  t.textContent = on ? 'GRUPO TENDAS PLENART — SINCRONIZADO' : 'GRUPO TENDAS PLENART — SEM CONEXÃO';
+}
+
+/* tempo real */
+sb.channel('escala-rt')
+  .on('postgres_changes',{event:'*',schema:'public',table:'escala_marcas'},p=>{
+    if(p.eventType==='DELETE'){ if(p.old && p.old.chave) delete db.marcas[p.old.chave]; }
+    else if(p.new){ db.marcas[p.new.chave] = {s:p.new.status, obs:p.new.obs||''}; }
+    cacheSalva(); if(pronto) render();
+  })
+  .on('postgres_changes',{event:'*',schema:'public',table:'escala_montadores'},async p=>{
+    const r = await sb.from('escala_montadores').select('*');
+    if(!r.error){ db.montadores = r.data; cacheSalva(); if(pronto) render(); }
+  })
+  .on('postgres_changes',{event:'*',schema:'public',table:'escala_equipes'},async p=>{
+    const r = await sb.from('escala_equipes').select('*').order('ordem');
+    if(!r.error){ db.equipes = r.data; cacheSalva(); if(pronto) render(); }
+  })
+  .subscribe(st=>{ if(st==='SUBSCRIBED') setSync(true); });
+
+/* gravação */
+async function pushMarca(k, valor){
+  const [dia,id] = k.split('|');
+  if(valor===null){
+    const {error} = await sb.from('escala_marcas').delete().eq('chave',k);
+    if(error){ setSync(false); toast('Não salvou — verifique a internet'); }
+  }else{
+    const {error} = await sb.from('escala_marcas').upsert({chave:k, dia, montador_id:id, status:valor.s, obs:valor.obs||'', atualizado_em:new Date().toISOString()});
+    if(error){ setSync(false); toast('Não salvou — verifique a internet'); }
+  }
+}
+
+let hoje = new Date();
+let ano = hoje.getFullYear(), mes = hoje.getMonth();
+let tab = 'escala';
+let pincel = 'T';
+
+const MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+const DIAS  = ['DOM','SEG','TER','QUA','QUI','SEX','SÁB'];
+
+function iso(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function membros(eqId){ return db.montadores.filter(m=>m.ativo && m.equipe===eqId); }
+function ativos(){ return db.montadores.filter(m=>m.ativo); }
+function equipeNome(id){ const e=db.equipes.find(e=>e.id===id); return e?e.nome:''; }
+
+function semanasDoMes(a,m){
+  const primeiro = new Date(a,m,1);
+  const ultimo   = new Date(a,m+1,0);
+  const ini = new Date(primeiro); ini.setDate(ini.getDate()-ini.getDay());
+  const semanas = [];
+  let d = new Date(ini);
+  while(d <= ultimo){
+    const dias = [];
+    for(let i=0;i<7;i++){
+      if(d.getMonth()===m) dias.push(new Date(d));
+      d.setDate(d.getDate()+1);
+    }
+    if(dias.length) semanas.push(dias);
+  }
+  return semanas;
+}
+
+/* ================= RENDER ================= */
+function render(){
+  if(!pronto) return;
+  document.getElementById('mesAtual').textContent = MESES[mes]+' '+ano;
+  document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on', b.dataset.tab===tab));
+  const main = document.getElementById('main');
+  if(tab==='escala') main.innerHTML = renderEscala();
+  if(tab==='mes')    main.innerHTML = renderResumoMes();
+  if(tab==='ano')    main.innerHTML = renderResumoAno();
+  if(tab==='rel')    main.innerHTML = renderRelatorio();
+  if(tab==='mont')   main.innerHTML = renderMontadores();
+}
+
+function renderEscala(){
+  let h = `<div class="pincel">` + ORDEM_PINCEL.map(s=>{
+    const nome = s ? STATUS[s] : 'APAGAR';
+    return `<button class="chip ${pincel===s?'sel':''}" data-s="${s}" onclick="setPincel('${s}')">${nome}</button>`;
+  }).join('') + `</div>
+  <div class="pincel-dica">Toque num dia vazio pra marcar com o status escolhido. Toque num dia já marcado pra trocar o status ou colocar observação.</div>`;
+
+  semanasDoMes(ano,mes).forEach((dias,si)=>{
+    const d1 = dias[0], d7 = dias[dias.length-1];
+    const rot = dias.length===1
+      ? `DIA ${String(d1.getDate()).padStart(2,'0')}/${String(d1.getMonth()+1).padStart(2,'0')}`
+      : `SEMANA ${String(d1.getDate()).padStart(2,'0')}/${String(d1.getMonth()+1).padStart(2,'0')} A ${String(d7.getDate()).padStart(2,'0')}/${String(d7.getMonth()+1).padStart(2,'0')}`;
+    h += `<div class="semana"><div class="semana-cab"><b>${rot}</b>
+      <button onclick="preencheSemana(${si})">PREENCHER VAZIOS</button></div>
+      <div class="grade-wrap"><table class="grade"><thead><tr><th class="nome-col">MONTADOR</th>`;
+    dias.forEach(d=>{ h += `<th>${DIAS[d.getDay()]}<span class="dnum">${d.getDate()}</span></th>`; });
+    h += `<th>TRAB.</th></tr></thead><tbody>`;
+
+    db.equipes.forEach(eq=>{
+      const ms = membros(eq.id);
+      if(!ms.length) return;
+      h += `<tr class="eq-row"><td colspan="${dias.length+2}">${eq.nome}</td></tr>`;
+      ms.forEach(mo=>{
+        let trab = 0;
+        h += `<tr><td class="nome">${mo.nome}</td>`;
+        dias.forEach(d=>{
+          const k = iso(d)+'|'+mo.id;
+          const mk = db.marcas[k];
+          const s = mk ? mk.s : '';
+          if(s==='T') trab++;
+          h += `<td><button class="cel" data-s="${s}" onclick="clicaCel('${iso(d)}','${mo.id}')">${s?STATUS[s]:'—'}${mk&&mk.obs?'<span class="obs-flag"></span>':''}</button></td>`;
+        });
+        h += `<td class="tot">${trab}</td></tr>`;
+      });
+    });
+    h += `</tbody></table></div></div>`;
+  });
+  return h;
+}
+
+function contagemPeriodo(datas){
+  const out = {};
+  ativos().forEach(mo=>{ out[mo.id]={T:0,MT:0,FO:0,FA:0,AT:0,FE:0,DF:0,DOMT:0}; });
+  datas.forEach(d=>{
+    const di = iso(d);
+    ativos().forEach(mo=>{
+      const mk = db.marcas[di+'|'+mo.id];
+      if(mk && out[mo.id][mk.s]!==undefined){
+        out[mo.id][mk.s]++;
+        if(mk.s==='T' && d.getDay()===0) out[mo.id].DOMT++;
+      }
+    });
+  });
+  return out;
+}
+function diasDoMes(a,m){
+  const out=[]; const ult=new Date(a,m+1,0).getDate();
+  for(let d=1;d<=ult;d++) out.push(new Date(a,m,d));
+  return out;
+}
+
+const CABEC_RES = `<tr><th>MONTADOR</th><th>TRABALHOU</th><th>MANUTENÇÃO</th><th>FOLGA</th><th>FALTOU</th><th>ATESTADO</th><th>FÉRIAS</th><th>DOM/FER</th><th>DOMINGOS TRAB.</th></tr>`;
+function linhaResumo(mo,c){
+  const z = v=> v ? v : `<span class="zero">0</span>`;
+  return `<tr><td>${mo.nome}</td>
+    <td class="col-t">${z(c.T)}</td><td class="col-mt">${z(c.MT)}</td><td>${z(c.FO)}</td>
+    <td class="col-fa">${z(c.FA)}</td><td class="col-at">${z(c.AT)}</td>
+    <td class="col-fe">${z(c.FE)}</td><td class="col-df">${z(c.DF)}</td>
+    <td class="col-df">${z(c.DOMT)}</td></tr>`;
+}
+function tabelaResumo(titulo, contagem){
+  let h = `<div class="res-card"><div class="res-tit">${titulo}</div>
+    <div class="res-wrap"><table class="res"><thead>${CABEC_RES}</thead><tbody>`;
+  db.equipes.forEach(eq=>{
+    const ms = membros(eq.id);
+    if(!ms.length) return;
+    h += `<tr class="eq-row"><td colspan="9">${eq.nome}</td></tr>`;
+    ms.forEach(mo=>{ h += linhaResumo(mo, contagem[mo.id]); });
+  });
+  return h + `</tbody></table></div></div>`;
+}
+
+function renderResumoMes(){
+  const c = contagemPeriodo(diasDoMes(ano,mes));
+  let h = tabelaResumo(`Resumo de ${MESES[mes]} ${ano}`, c);
+
+  const obs = [];
+  diasDoMes(ano,mes).forEach(d=>{
+    ativos().forEach(mo=>{
+      const mk = db.marcas[iso(d)+'|'+mo.id];
+      if(mk && mk.obs) obs.push({d, mo, mk});
+    });
+  });
+  h += `<div class="res-card"><div class="res-tit">Observações de ${MESES[mes]}</div>`;
+  if(!obs.length){ h += `<div class="obs-vazio">Nenhuma observação lançada neste mês.</div>`; }
+  else obs.forEach(o=>{
+    h += `<div class="obs-item"><b>${String(o.d.getDate()).padStart(2,'0')}/${String(mes+1).padStart(2,'0')} — ${o.mo.nome}</b>
+      <span class="tag" style="background:${COR[o.mk.s]}">${STATUS[o.mk.s]}</span>${o.mk.obs}</div>`;
+  });
+  h += `</div>`;
+  return h;
+}
+
+function renderResumoAno(){
+  let datas=[];
+  for(let m=0;m<12;m++) datas = datas.concat(diasDoMes(ano,m));
+  return tabelaResumo(`Resumo do ano ${ano}`, contagemPeriodo(datas));
+}
+
+let relMont = null;
+function renderRelatorio(){
+  const lista = db.montadores.filter(m=>m.ativo);
+  if(!lista.length) return `<div class="res-card"><div class="obs-vazio">Nenhum montador ativo.</div></div>`;
+  if(!relMont || !lista.some(m=>m.id===relMont)) relMont = lista[0].id;
+  const mo = db.montadores.find(m=>m.id===relMont);
+
+  let h = `<div class="rel-sel">
+    <select onchange="relMont=this.value;render()">` +
+    db.equipes.map(eq=>{
+      const ms = lista.filter(m=>m.equipe===eq.id);
+      if(!ms.length) return '';
+      return `<optgroup label="${eq.nome}">`+ms.map(m=>`<option value="${m.id}" ${m.id===relMont?'selected':''}>${m.nome}</option>`).join('')+`</optgroup>`;
+    }).join('') + `</select>
+    <span class="rel-ano">ano de ${ano} — use as setas de mês lá em cima pra mudar o ano</span>
+  </div>`;
+
+  const tot = {T:0,MT:0,FO:0,FA:0,AT:0,FE:0,DF:0,DOMT:0};
+  let linhas = '';
+  for(let m=0;m<12;m++){
+    const c = contagemPeriodo(diasDoMes(ano,m))[mo.id];
+    Object.keys(tot).forEach(k=>tot[k]+=c[k]);
+    const z = v=> v ? v : `<span class="zero">0</span>`;
+    linhas += `<tr><td style="text-transform:capitalize">${MESES[m]}</td>
+      <td class="col-t">${z(c.T)}</td><td class="col-mt">${z(c.MT)}</td><td>${z(c.FO)}</td>
+      <td class="col-fa">${z(c.FA)}</td><td class="col-at">${z(c.AT)}</td>
+      <td class="col-fe">${z(c.FE)}</td><td class="col-df">${z(c.DF)}</td>
+      <td class="col-df">${z(c.DOMT)}</td></tr>`;
+  }
+  linhas += `<tr class="rel-total"><td>TOTAL ${ano}</td>
+    <td class="col-t">${tot.T}</td><td class="col-mt">${tot.MT}</td><td>${tot.FO}</td>
+    <td class="col-fa">${tot.FA}</td><td class="col-at">${tot.AT}</td>
+    <td class="col-fe">${tot.FE}</td><td class="col-df">${tot.DF}</td>
+    <td class="col-df">${tot.DOMT}</td></tr>`;
+
+  h += `<div class="res-card"><div class="res-tit">${mo.nome} — ${equipeNome(mo.equipe)} — ${ano}</div>
+    <div class="res-wrap"><table class="res"><thead>
+    <tr><th>MÊS</th><th>TRABALHOU</th><th>MANUTENÇÃO</th><th>FOLGA</th><th>FALTOU</th><th>ATESTADO</th><th>FÉRIAS</th><th>DOM/FER</th><th>DOMINGOS TRAB.</th></tr>
+    </thead><tbody>${linhas}</tbody></table></div></div>`;
+
+  const faltas=[], atest=[], obs=[];
+  for(let m=0;m<12;m++){
+    diasDoMes(ano,m).forEach(d=>{
+      const mk = db.marcas[iso(d)+'|'+mo.id];
+      if(!mk) return;
+      const rot = String(d.getDate()).padStart(2,'0')+'/'+String(m+1).padStart(2,'0');
+      if(mk.s==='FA') faltas.push(rot);
+      if(mk.s==='AT') atest.push(rot);
+      if(mk.obs) obs.push({rot, mk});
+    });
+  }
+  h += `<div class="res-card"><div class="res-tit">Faltas em ${ano}</div>`;
+  h += faltas.length ? `<div class="obs-item">${faltas.join('  ·  ')}</div>` : `<div class="obs-vazio">Nenhuma falta no ano.</div>`;
+  h += `</div><div class="res-card"><div class="res-tit">Atestados em ${ano}</div>`;
+  h += atest.length ? `<div class="obs-item">${atest.join('  ·  ')}</div>` : `<div class="obs-vazio">Nenhum atestado no ano.</div>`;
+  h += `</div><div class="res-card"><div class="res-tit">Observações em ${ano}</div>`;
+  if(!obs.length) h += `<div class="obs-vazio">Nenhuma observação no ano.</div>`;
+  else obs.forEach(o=>{
+    h += `<div class="obs-item"><b>${o.rot}</b><span class="tag" style="background:${COR[o.mk.s]}">${STATUS[o.mk.s]}</span>${o.mk.obs}</div>`;
+  });
+  h += `</div>`;
+  return h;
+}
+
+function renderMontadores(){
+  let h = `<div class="mont-lista"><div class="add-row">
+    <input id="novoNome" placeholder="NOME" onkeydown="if(event.key==='Enter')addMont()">
+    <select id="novaEquipe">${db.equipes.map(e=>`<option value="${e.id}">${e.nome}</option>`).join('')}</select>
+    <button onclick="addMont()">ADICIONAR</button>
+  </div></div>`;
+  db.equipes.forEach(eq=>{
+    const ms = db.montadores.filter(m=>m.equipe===eq.id);
+    h += `<div class="mont-lista"><div class="eq-tit">${eq.nome}</div>`;
+    if(!ms.length) h += `<div class="obs-vazio">Ninguém nessa equipe.</div>`;
+    ms.forEach(mo=>{
+      h += `<div class="mont-item ${mo.ativo?'':'inativo'}"><b>${mo.nome}</b>
+        <select onchange="mudaEquipe('${mo.id}',this.value)">${db.equipes.map(e=>`<option value="${e.id}" ${e.id===mo.equipe?'selected':''}>${e.nome}</option>`).join('')}</select>
+        <button onclick="renomeia('${mo.id}')">RENOMEAR</button>
+        <button onclick="toggleAtivo('${mo.id}')">${mo.ativo?'DESATIVAR':'ATIVAR'}</button>
+        <button class="rm" onclick="removeMont('${mo.id}')">EXCLUIR</button></div>`;
+    });
+    h += `</div>`;
+  });
+  return h;
+}
+
+/* ================= AÇÕES ================= */
+function vaiTab(t){ tab=t; render(); }
+function mudaMes(dir){ mes+=dir; if(mes<0){mes=11;ano--;} if(mes>11){mes=0;ano++;} render(); }
+function setPincel(s){ pincel=s; render(); }
+
+let modalKey=null, modalStatus=null;
+function clicaCel(dia,id){
+  const k = dia+'|'+id;
+  const mk = db.marcas[k];
+  if(!mk){
+    if(!pincel) return;
+    db.marcas[k]={s:pincel,obs:''};
+    cacheSalva(); render();
+    pushMarca(k, db.marcas[k]);
+    return;
+  }
+  abreModal(k);
+}
+function abreModal(k){
+  modalKey = k;
+  const [dia,id] = k.split('|');
+  const mo = db.montadores.find(m=>m.id===id);
+  const mk = db.marcas[k] || {s:pincel||'T',obs:''};
+  modalStatus = mk.s;
+  const dt = new Date(dia+'T12:00:00');
+  document.getElementById('mNome').textContent = mo ? mo.nome : '';
+  document.getElementById('mData').textContent = DIAS[dt.getDay()].toLowerCase()+', '+dt.getDate()+' de '+MESES[dt.getMonth()]+' de '+dt.getFullYear();
+  document.getElementById('mObs').value = mk.obs||'';
+  desenhaStatusModal();
+  document.getElementById('modalFundo').classList.add('show');
+}
+function desenhaStatusModal(){
+  document.getElementById('mStatus').innerHTML = Object.keys(STATUS).map(s=>
+    `<button class="chip" style="background:${COR[s]};${modalStatus===s?'border-color:var(--ink);box-shadow:0 2px 0 var(--ink)':''}" onclick="modalStatusSet('${s}')">${STATUS[s]}</button>`
+  ).join('');
+}
+function modalStatusSet(s){ modalStatus=s; desenhaStatusModal(); }
+function modalSalvar(){
+  const valor = {s:modalStatus, obs:document.getElementById('mObs').value.trim()};
+  db.marcas[modalKey] = valor;
+  cacheSalva(); fechaModal(); render();
+  pushMarca(modalKey, valor);
+}
+function modalApagar(){
+  const k = modalKey;
+  delete db.marcas[k];
+  cacheSalva(); fechaModal(); render();
+  pushMarca(k, null);
+}
+function fechaModal(){ document.getElementById('modalFundo').classList.remove('show'); modalKey=null; }
+
+async function preencheSemana(si){
+  if(!pincel){ toast('Escolha um status no pincel primeiro'); return; }
+  const dias = semanasDoMes(ano,mes)[si];
+  const linhas = [];
+  dias.forEach(d=>{
+    ativos().forEach(mo=>{
+      const k = iso(d)+'|'+mo.id;
+      if(!db.marcas[k]){
+        db.marcas[k]={s:pincel,obs:''};
+        linhas.push({chave:k, dia:iso(d), montador_id:mo.id, status:pincel, obs:'', atualizado_em:new Date().toISOString()});
+      }
+    });
+  });
+  cacheSalva(); render();
+  if(linhas.length){
+    const {error} = await sb.from('escala_marcas').upsert(linhas);
+    if(error){ setSync(false); toast('Não salvou — verifique a internet'); }
+    else toast('Vazios preenchidos com '+STATUS[pincel]);
+  }
+}
+
+async function addMont(){
+  const inp = document.getElementById('novoNome');
+  const eqSel = document.getElementById('novaEquipe');
+  const n = inp.value.trim().toUpperCase();
+  if(!n) return;
+  const novo = {id:'m'+Date.now(), nome:n, equipe:eqSel.value, ativo:true};
+  db.montadores.push(novo);
+  cacheSalva(); render();
+  const {error} = await sb.from('escala_montadores').insert(novo);
+  if(error){ setSync(false); toast('Não salvou — verifique a internet'); }
+  else toast('Adicionado em '+equipeNome(novo.equipe));
+}
+async function mudaEquipe(id,eq){
+  db.montadores.find(m=>m.id===id).equipe = eq;
+  cacheSalva(); render();
+  const {error} = await sb.from('escala_montadores').update({equipe:eq}).eq('id',id);
+  if(error){ setSync(false); toast('Não salvou — verifique a internet'); }
+}
+async function renomeia(id){
+  const mo = db.montadores.find(m=>m.id===id);
+  const n = prompt('Novo nome:', mo.nome);
+  if(!n || !n.trim()) return;
+  mo.nome = n.trim().toUpperCase();
+  cacheSalva(); render();
+  const {error} = await sb.from('escala_montadores').update({nome:mo.nome}).eq('id',id);
+  if(error){ setSync(false); toast('Não salvou — verifique a internet'); }
+}
+async function toggleAtivo(id){
+  const mo = db.montadores.find(m=>m.id===id);
+  mo.ativo = !mo.ativo;
+  cacheSalva(); render();
+  const {error} = await sb.from('escala_montadores').update({ativo:mo.ativo}).eq('id',id);
+  if(error){ setSync(false); toast('Não salvou — verifique a internet'); }
+}
+async function removeMont(id){
+  const mo = db.montadores.find(m=>m.id===id);
+  if(!confirm('Excluir '+mo.nome+'? As marcações dele somem da escala em todos os aparelhos.')) return;
+  db.montadores = db.montadores.filter(m=>m.id!==id);
+  Object.keys(db.marcas).forEach(k=>{ if(k.endsWith('|'+id)) delete db.marcas[k]; });
+  cacheSalva(); render();
+  const {error} = await sb.from('escala_montadores').delete().eq('id',id);
+  if(error){ setSync(false); toast('Não salvou — verifique a internet'); }
+}
+
+/* backup */
+function exportar(){
+  const blob = new Blob([JSON.stringify(db,null,1)],{type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'escala_montadores_backup_'+iso(new Date())+'.json';
+  a.click();
+  toast('Backup salvo');
+}
+
+let tTimer;
+function toast(msg){
+  const el = document.getElementById('aviso');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(tTimer);
+  tTimer = setTimeout(()=>el.classList.remove('show'), 2600);
+}
+
+carregarTudo(false);
+</script>
+</body>
+</html>
